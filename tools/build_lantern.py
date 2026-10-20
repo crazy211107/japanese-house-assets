@@ -89,10 +89,27 @@ def cylinder(name, r_bottom, r_top, height, z, segments=24, x=0.0, y=0.0):
 def make_stone_material():
     mat = bpy.data.materials.new('stone_granite')
     mat.use_nodes = True
-    bsdf = mat.node_tree.nodes.get('Principled BSDF')
+    nt = mat.node_tree
+    bsdf = nt.nodes.get('Principled BSDF')
     bsdf.inputs['Base Color'].default_value = (0.44, 0.43, 0.40, 1.0)
     bsdf.inputs['Roughness'].default_value = 0.88
     bsdf.inputs['Metallic'].default_value = 0.0
+
+    # 顶点色必须真的接进节点树，否则 glTF 导出器会以
+    # "The active Vertex Color will not be exported, as it is not used in
+    #  the node tree of the material" 为由整段丢掉 COLOR_0。
+    vcol = nt.nodes.new('ShaderNodeVertexColor')
+    vcol.layer_name = 'Col'
+    vcol.location = (-520, 160)
+
+    mix = nt.nodes.new('ShaderNodeMixRGB')
+    mix.blend_type = 'MULTIPLY'
+    mix.inputs['Fac'].default_value = 1.0
+    mix.inputs['Color1'].default_value = (0.44, 0.43, 0.40, 1.0)
+    mix.location = (-260, 160)
+
+    nt.links.new(vcol.outputs['Color'], mix.inputs['Color2'])
+    nt.links.new(mix.outputs['Color'], bsdf.inputs['Base Color'])
     return mat
 
 
@@ -258,6 +275,9 @@ def export_glb(obj, out_path, draco=True):
         export_texcoords=True,
         export_normals=True,
         export_materials='EXPORT',
+        # 强制导出活动顶点色：材质里虽然已接了节点，但不同小版本的
+        # 判定逻辑不一样，显式指定更稳
+        export_vertex_color='ACTIVE',
     )
     if draco:
         kwargs.update(
