@@ -1,0 +1,1 @@
+# japanese-house-assets
