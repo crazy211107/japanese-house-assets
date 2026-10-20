@@ -87,7 +87,7 @@ def cylinder(name, r_bottom, r_top, height, z, segments=24, x=0.0, y=0.0):
 # ---------------------------------------------------------------- 石头材质
 
 # 石头基色（线性空间）。sRGB 约 #8a8880 —— 场景里其它石材也在这个档位
-STONE_LINEAR = (0.260, 0.252, 0.232)
+STONE_LINEAR = (0.145, 0.139, 0.126)
 
 
 def make_stone_material():
@@ -96,7 +96,7 @@ def make_stone_material():
     nt = mat.node_tree
     bsdf = nt.nodes.get('Principled BSDF')
     bsdf.inputs['Base Color'].default_value = (*STONE_LINEAR, 1.0)
-    bsdf.inputs['Roughness'].default_value = 0.88
+    bsdf.inputs['Roughness'].default_value = 0.92
     bsdf.inputs['Metallic'].default_value = 0.0
 
     # 顶点色必须真的接进节点树，否则 glTF 导出器会以
