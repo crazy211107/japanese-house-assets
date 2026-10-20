@@ -86,30 +86,30 @@ def cylinder(name, r_bottom, r_top, height, z, segments=24, x=0.0, y=0.0):
 
 # ---------------------------------------------------------------- 石头材质
 
+# 石头基色（线性空间）。sRGB 约 #8a8880 —— 场景里其它石材也在这个档位
+STONE_LINEAR = (0.260, 0.252, 0.232)
+
+
 def make_stone_material():
     mat = bpy.data.materials.new('stone_granite')
     mat.use_nodes = True
     nt = mat.node_tree
     bsdf = nt.nodes.get('Principled BSDF')
-    bsdf.inputs['Base Color'].default_value = (0.44, 0.43, 0.40, 1.0)
+    bsdf.inputs['Base Color'].default_value = (*STONE_LINEAR, 1.0)
     bsdf.inputs['Roughness'].default_value = 0.88
     bsdf.inputs['Metallic'].default_value = 0.0
 
     # 顶点色必须真的接进节点树，否则 glTF 导出器会以
     # "The active Vertex Color will not be exported, as it is not used in
     #  the node tree of the material" 为由整段丢掉 COLOR_0。
+    #
+    # 注意这里**不再**用 Mix(Multiply) 去乘一个常量：导出器读不懂这条链时
+    # 会把 baseColorFactor 写成 1,1,1，石头就变成一块白石膏。
+    # 正确做法是把最终颜色直接烘进顶点色，再直连 Base Color。
     vcol = nt.nodes.new('ShaderNodeVertexColor')
     vcol.layer_name = 'Col'
-    vcol.location = (-520, 160)
-
-    mix = nt.nodes.new('ShaderNodeMixRGB')
-    mix.blend_type = 'MULTIPLY'
-    mix.inputs['Fac'].default_value = 1.0
-    mix.inputs['Color1'].default_value = (0.44, 0.43, 0.40, 1.0)
-    mix.location = (-260, 160)
-
-    nt.links.new(vcol.outputs['Color'], mix.inputs['Color2'])
-    nt.links.new(mix.outputs['Color'], bsdf.inputs['Base Color'])
+    vcol.location = (-360, 140)
+    nt.links.new(vcol.outputs['Color'], bsdf.inputs['Base Color'])
     return mat
 
 
@@ -164,7 +164,15 @@ def paint_weathering(obj):
             g *= (1.0 - 0.12 * moss)
             b *= (1.0 - 0.55 * moss)
 
-            layer.data[loop_idx].color = (r, g, b, 1.0)
+            # 直接把石头基色乘进来：glTF 里 COLOR_0 会和 baseColorFactor
+            # 相乘，而导出器只认「Color Attribute 直连 Base Color」这一种接法，
+            # 所以颜色必须在这一步就定死，不能再指望材质里乘常量
+            layer.data[loop_idx].color = (
+                r * STONE_LINEAR[0],
+                g * STONE_LINEAR[1],
+                b * STONE_LINEAR[2],
+                1.0,
+            )
 
 
 # ---------------------------------------------------------------- 造型
@@ -210,8 +218,8 @@ def build_lantern():
 
     # 笠（かさ）：四坡屋面。cone 的 4 个顶点先转 45°，让边与轴对齐
     bpy.ops.mesh.primitive_cone_add(
-        vertices=4, radius1=0.625, radius2=0.045, depth=0.26,
-        location=(0.0, 0.0, 1.675), rotation=(0.0, 0.0, math.radians(45.0)),
+        vertices=4, radius1=0.560, radius2=0.045, depth=0.34,
+        location=(0.0, 0.0, 1.700), rotation=(0.0, 0.0, math.radians(45.0)),
     )
     kasa = bpy.context.active_object
     kasa.name = 'kasa'
@@ -228,13 +236,13 @@ def build_lantern():
 
     # 宝珠（ほうじゅ）
     bpy.ops.mesh.primitive_uv_sphere_add(radius=0.075, segments=16, ring_count=8,
-                                         location=(0.0, 0.0, 1.845))
+                                         location=(0.0, 0.0, 1.945))
     hoju = bpy.context.active_object
     hoju.name = 'hoju'
     for poly in hoju.data.polygons:
         poly.use_smooth = True
     parts.append(hoju)
-    parts.append(cylinder('hoju_neck', 0.035, 0.05, 0.06, z=1.775, segments=12))
+    parts.append(cylinder('hoju_neck', 0.035, 0.05, 0.06, z=1.875, segments=12))
 
     # 合并成一个网格：石灯笼是一整块石构件，一个 drawcall 也符合物理
     bpy.ops.object.select_all(action='DESELECT')
