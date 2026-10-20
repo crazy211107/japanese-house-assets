@@ -1,0 +1,59 @@
+name: build-glb
+
+on:
+  workflow_dispatch:
+  push:
+    paths-ignore:
+      - 'dist/**'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Blender 4.2 LTS (latest patch)
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq libxi6 libxxf86vm1 libxfixes3 libxrender1 \
+            libxkbcommon0 libglu1-mesa libgomp1
+          # 不写死小版本：4.2 的补丁号会变，直接从发布目录里取最新的
+          VER=$(curl -s https://download.blender.org/release/Blender4.2/ \
+            | grep -o 'blender-4\.2\.[0-9]*-linux-x64\.tar\.xz' \
+            | sort -V | tail -1)
+          if [ -z "$VER" ]; then echo "找不到 4.2 的安装包"; exit 1; fi
+          echo "Blender package: $VER"
+          curl -fLO "https://download.blender.org/release/Blender4.2/$VER"
+          tar -xf "$VER"
+          mv "${VER%.tar.xz}" blender
+          ./blender/blender --version
+
+      - name: Build GLB
+        run: |
+          mkdir -p dist
+          set +e
+          ./blender/blender -b --factory-startup \
+            --python tools/build_lantern.py -- --out dist 2>&1 | tee dist/build.log
+          status=${PIPESTATUS[0]}
+          echo "exit=$status" | tee -a dist/build.log
+          exit $status
+
+      # 即使构建失败也把日志提交回来，否则 Actions 日志在仓库外拿不到
+      - name: Commit result (glb + log)
+        if: always()
+        run: |
+          git config user.name  "asset-bot"
+          git config user.email "asset-bot@users.noreply.github.com"
+          git add dist || true
+          if git diff --cached --quiet; then
+            echo "dist 无变化，跳过提交"
+          else
+            git commit -m "build: stone-lantern [skip ci]"
+            git push
+          fi
