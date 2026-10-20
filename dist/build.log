@@ -1,0 +1,23 @@
+INFO Draco mesh compression is available, use library at /home/runner/work/japanese-house-assets/japanese-house-assets/blender/4.2/python/lib/python3.11/site-packages/libextern_draco.so
+04:25:34 | INFO: Starting glTF 2.0 export
+04:25:34 | INFO: Extracting primitive: Cube
+04:25:34 | WARNING: The active Vertex Color will not be exported, as it is not used in the node tree of the material
+04:25:34 | INFO: Primitives created: 1
+04:25:34 | INFO: Draco encoder: Encoding mesh SM_StoneLantern.
+04:25:34 | INFO: Finished glTF 2.0 export in 0.009157657623291016 s
+
+---- build summary ----
+object      : SM_StoneLantern
+vertices    : 1190
+triangles   : 2292
+dimensions  : 0.866 x 0.866 x 1.920 m
+glb size    : 42.0 KB
+output      : /home/runner/work/japanese-house-assets/japanese-house-assets/dist/stone-lantern.glb
+-----------------------
+OK
+Blender 4.2.23 LTS (hash d0cbe84903e8 built 2026-07-21 01:31:03)
+DracoEncoder | Preserve triangle order: no
+DracoEncoder | Encoded 4584 vertices, 6876 indices, raw size: 233784, encoded size: 41612, compression ratio: 5.62
+
+Blender quit
+exit=0
